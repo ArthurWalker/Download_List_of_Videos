@@ -2,6 +2,9 @@ from __future__ import unicode_literals
 import os
 import googleapiclient.discovery
 import youtube_dl
+# https://github.com/ytdl-org/youtube-dl
+# Settings for downloading:
+#        https://github.com/ytdl-org/youtube-dl/blob/611c1dd96efc36a788475e14cc4de64d554d28a0/youtube_dl/YoutubeDL.py#L248
 
 def prepare_API_request():
     # Disable OAuthlib's HTTPS verification when running locally.
@@ -56,24 +59,25 @@ def display_video_ID_list(page):
         lst_video_id.append(video['snippet']['resourceId']['videoId'])
     return lst_video_id
 
-def download_Youtube_video(page,default_link):
+def download_one_Youtube_video(video_info,default_link):
     # Download a Youtube video
     download_video_options = {}
     with youtube_dl.YoutubeDL(download_video_options) as ydl:
-        ydl.download([default_link+page[0]['snippet']['resourceId']['videoId']])
+        ydl.download([default_link+video_info['resourceId']['videoId']])
 
-def download_Youtube_audio(page,default_link):
+def download_one_Youtube_audio(video_info,default_link):
     # Download a Youtube audio
-    video_info = page[0]['snippet']
     download_audio_options = {
-        # Choice of quality
-        'format':'bestaudio/best',
+        # Choice of video quality: bestaudio/best for best quality or worstaudio/worst for worst quality
+        'format':'worstaudio/worst',
         # Only keep the audio
         'extractaudio':True,
         # Download single, not playlist
         'noplaylist':True,
         'outtmpl':video_info['title']+'.%(ext)s',
         'nocheckcertificate':True,
+        # Print list of the formats to stdout and exit => Enable this will not download video, just print list of quality
+        #'listformats':True,
         'postprocessors':[{
                 'key':'FFmpegExtractAudio',
                 'preferredcodec':'mp3',
@@ -82,7 +86,7 @@ def download_Youtube_audio(page,default_link):
     }
     try:
         with youtube_dl.YoutubeDL(download_audio_options) as ydl:
-            ydl.download(default_link+video_info['resourceId']['videoId'])
+            ydl.download([default_link+video_info['resourceId']['videoId']])
     except Exception as err:
         print ('!!!!!!!Problem downloading with',video_info['resourceId']['videoId'],'as follow',err)
 
@@ -106,9 +110,9 @@ def main():
     # To access to each video then just need its ID. The link to access is https://www.youtube.com/watch?v=<VIDEO ID>
     default_link = 'https://www.youtube.com/watch?v='
 
-    # download_Youtube_video(page,default_link)
-
-    download_Youtube_audio(page,default_link)
+    sample_video_info = page[0]['snippet']
+    # download_one_Youtube_video(sample_video_info,default_link)
+    # download_one_Youtube_audio(sample_video_info,default_link)
 
 if __name__ == '__main__':
     main()
