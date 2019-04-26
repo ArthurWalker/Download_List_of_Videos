@@ -5,12 +5,16 @@ import youtube_dl
 # https://github.com/ytdl-org/youtube-dl
 # Settings for downloading:
 #        https://github.com/ytdl-org/youtube-dl/blob/611c1dd96efc36a788475e14cc4de64d554d28a0/youtube_dl/YoutubeDL.py#L248
+# Sample code:
+#        https://www.programcreek.com/python/example/98358/youtube_dl.YoutubeDL
 
 video_ID_dict = {}
-def retrieve_video_ID_list(page):
+def retrieve_video_ID_list(response):
     # Get a dictionary of all Video IDs in 1 response
-    for video in page:
-        video_ID_dict[video['snippet']['resourceId']['videoId']]={}
+    for video in response:
+        video_ID_dict[video['id']]={
+            'duration':video['contentDetails']['duration']
+        }
 
 def prepare_API_request(api_key,playlistID):
     # Disable OAuthlib's HTTPS verification when running locally.
@@ -25,6 +29,8 @@ def prepare_API_request(api_key,playlistID):
     # Execute the request
     youtube = googleapiclient.discovery.build(api_service_name,api_version,developerKey=dev_api_key)
 
+
+
     # Request playlist and store the video IDs
     flag=True
     pageToken = ''
@@ -36,28 +42,31 @@ def prepare_API_request(api_key,playlistID):
             pageToken=pageToken,
         )
         response_playlist = request_playlist.execute()
-        page = response_playlist['items']
-        retrieve_video_ID_list(page)
+        response_page = response_playlist['items']
+        # Request video duration
+        list_ids = ','.join([video['snippet']['resourceId']['videoId'] for video in response_page])
+        request_duration = youtube.videos().list(
+            part='contentDetails',
+            id=list_ids
+        )
+        response_duration = request_duration.execute()
+        response_duration_result = response_duration['items']
+        retrieve_video_ID_list(response_duration_result)
         if 'nextPageToken' not in response_playlist.keys():
             flag=False
             break
         pageToken = response_playlist['nextPageToken']
 
-    # Request video duration
-    # request_duration = youtube.videos().list(
-    #     part='contentDetails',
-    #     id = 'iNSGvZRgjcQ'
-    # )
-    # response_duration = request_duration.execute()
-    response_duration = ''
-    return (response_playlist,response_duration)
+    #response_playlist= ''
+    #response_duration = ''
+    return (response_playlist,response_duration['items'])
 
 def display_Info_response(response_playlist,response_duration):
     # Display response
     # General Information
-    print('General information is {}. Each page contains {}'.format(response_playlist['pageInfo'], list(response_playlist.keys())))
-    print('Next page token:', response_playlist['nextPageToken'])
-    #print('Duration:',response_duration['items'][0]['contentDetails']['duration'])
+    # print('General information is {}. Each page contains {}'.format(response_playlist['pageInfo'], list(response_playlist.keys())))
+    # print('Next page token:', response_playlist['nextPageToken'])
+    print('Duration:',response_duration)
 
 def display_Info_one_video(page):
     # Information for one video
@@ -158,11 +167,11 @@ def main():
 
     # Prepare API requests
     response_playlist,response_duration = prepare_API_request(API_key,playlist_ID)
-    #display_Info_response(response_playlist,response_duration)
+    display_Info_response(response_playlist,response_duration)
 
-    page = response_playlist['items']
-
-    display_Information(page)
+    # page = response_playlist['items']
+    #
+    # display_Information(page)
     #
     # create_directory()
     #
