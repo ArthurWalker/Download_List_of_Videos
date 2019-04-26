@@ -127,7 +127,7 @@ def download_one_Youtube_audio(videoID,default_link):
         'format':'worstaudio/worst',
         # Only keep the audio
         'extractaudio':True,
-        'forceduration':True,
+        'forceduration':False,'quiet':True,
         # Download single, not playlist
         'noplaylist':True,
         'outtmpl':'%(title)s.%(ext)s',
