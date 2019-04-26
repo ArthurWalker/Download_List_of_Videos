@@ -4,13 +4,16 @@ import googleapiclient.discovery
 import youtube_dl
 import re
 from tqdm import tqdm
-# https://github.com/ytdl-org/youtube-dl
+# Package:
+#        https://github.com/ytdl-org/youtube-dl
 # Settings for downloading:
 #        https://github.com/ytdl-org/youtube-dl/blob/611c1dd96efc36a788475e14cc4de64d554d28a0/youtube_dl/YoutubeDL.py#L248
 # Sample code:
 #        https://www.programcreek.com/python/example/98358/youtube_dl.YoutubeDL
 # Sample API:
-#https://developers.google.com/apis-explorer/#p/youtube/v3/youtube.videos.list?part=contentDetails&id=jMeSar7_ECE&fields=etag%252CeventId%252Citems%252Ckind%252CnextPageToken%252CpageInfo%252CprevPageToken%252CtokenPagination%252CvisitorId&_h=2&
+#        https://developers.google.com/apis-explorer/#p/youtube/v3/youtube.videos.list?part=contentDetails&id=jMeSar7_ECE&fields=etag%252CeventId%252Citems%252Ckind%252CnextPageToken%252CpageInfo%252CprevPageToken%252CtokenPagination%252CvisitorId&_h=2&
+# Sample code:
+#        https://www.youtube.com/watch?v=eZUpOY8mcRY&t=569s
 
 short_video_ID_dict = {}
 long_video_ID_dict = {}
