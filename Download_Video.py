@@ -32,7 +32,6 @@ def display_Info_response(response):
     # General Information
     print('General information is {}. Each page contains {}'.format(response['pageInfo'], list(response.keys())))
     print('Next page token:', response['nextPageToken'])
-    print('Page information:', response['pageInfo'])
 
 def display_Info_eachPage(page):
     # Information for each page
@@ -58,6 +57,15 @@ def display_video_ID_list(page):
     for video in page:
         lst_video_id.append(video['snippet']['resourceId']['videoId'])
     return lst_video_id
+
+
+def create_directory():
+    path = os.path.join('C:/Users/pphuc/Desktop/Docs/Current Using Docs/')
+    if not os.path.exists(path + 'Download Youtube Audio/'):
+        os.makedirs(path+'Download Youtube Audio/')
+    else:
+        os.chdir(path+'Download Youtube Audio/')
+    return path
 
 def download_one_Youtube_video(video_info,default_link):
     # Download a Youtube video
@@ -90,6 +98,9 @@ def download_one_Youtube_audio(video_info,default_link):
     except Exception as err:
         print ('!!!!!!!Problem downloading with',video_info['resourceId']['videoId'],'as follow',err)
 
+def download_multiple_Youtube_audios(default_link):
+    pass
+
 def my_hook(d):
     if d['status']=='finished':
         print ('Done downloading, now converting ...')
@@ -107,12 +118,16 @@ def main():
 
     # display_video_ID_list(page)
 
+    create_directory()
+
     # To access to each video then just need its ID. The link to access is https://www.youtube.com/watch?v=<VIDEO ID>
     default_link = 'https://www.youtube.com/watch?v='
 
-    sample_video_info = page[0]['snippet']
+    # sample_video_info = page[2]['snippet']
     # download_one_Youtube_video(sample_video_info,default_link)
-    # download_one_Youtube_audio(sample_video_info,default_link)
+    # download_one_Youtube_audio(sample_video_info,default_link,)
+
+    download_multiple_Youtube_audios(default_link)
 
 if __name__ == '__main__':
     main()
