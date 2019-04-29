@@ -21,6 +21,8 @@ long_video_ID_dict = {}
 result_json = {
     'downloaded_ID':[]
 }
+total_videos =''
+
 def retrieve_video_ID_list(response):
     # Get a dictionary of all Video IDs in 1 response
     for video in response:
@@ -70,7 +72,7 @@ def prepare_API_request(api_key,playlistID):
                 response_duration_result = response_duration['items']
                 retrieve_video_ID_list(response_duration_result)
             except KeyError as err:
-                print (response_page)
+                #print (response_page)
                 print ('No Key',err,'after',response_duration['items'][-1])
             if 'nextPageToken' not in response_playlist.keys():
                 flag=False
@@ -82,6 +84,7 @@ def prepare_API_request(api_key,playlistID):
     #response_playlist= ''
     #response_duration = ''
     #return (response_playlist['items'],response_duration['items'])
+    total_videos = response_playlist['pageInfo']['totalResults']
 
 def display_Info_response(response_playlist,response_duration):
     # Display response
@@ -173,6 +176,7 @@ def download_Functions(playlist_ID):
     # Download a single audio
     # To access to each video then just need its ID. The link to access is https://www.youtube.com/watch?v=<VIDEO ID>
     default_link = 'https://www.youtube.com/watch?v='
+    print ('{} of short audios and {} long audios are available to download out of {}'.format(len(short_video_ID_dict.keys()),len(long_video_ID_dict.keys()),total_videos))
     for videoID in tqdm(short_video_ID_dict.keys()):
         download_one_Youtube_audio(videoID,default_link)
         #download_one_Youtube_video(sample_video_info,default_link)
