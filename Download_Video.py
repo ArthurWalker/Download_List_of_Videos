@@ -44,7 +44,6 @@ def prepare_API_request(api_key,playlistID):
 
     # Request playlist and store the video IDs
     flag=True
-    count = 0
     pageToken = ''
     while flag:
         try:
@@ -65,15 +64,14 @@ def prepare_API_request(api_key,playlistID):
                 )
                 response_duration = request_duration.execute()
                 response_duration_result = response_duration['items']
-                count+=1
+                retrieve_video_ID_list(response_duration_result)
             except KeyError as err:
                 print (response_duration)
-                print ('No Key',err,list_ids)
+                print ('No Key',err,response_duration['items'][-1])
             #print (count,response_duration)
             if 'nextPageToken' not in response_playlist.keys():
                 flag=False
                 break
-            retrieve_video_ID_list(response_duration_result)
             pageToken = response_playlist['nextPageToken']
         except KeyError as err:
             print ('No key',err)
