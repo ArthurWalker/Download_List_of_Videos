@@ -20,7 +20,18 @@ import time
 short_video_ID_dict = {}
 long_video_ID_dict = {}
 no_duration_video_ID = []
-result_json = {'downloaded_ID':[],'not_available_ID':[]}
+result_json = {
+    # List of downloaded video
+    'downloaded_ID':[],
+    # List of failed downloaded video
+    'not_downloaded_ID':[],
+    # The latest video in the playlist as the process executes from the lastest to the oldest
+    'lastest_downloaded_ID':'',
+    # List of short video ID (not downloaded)
+    'short_video_ID':[],
+    # List of long video ID (not downloaded)
+    'long_video_ID':[],
+}
 total_videos =''
 
 def retrieve_video_ID_list(response):
@@ -146,6 +157,11 @@ def create_directory(path):
         os.chdir(path+'Download Youtube Audio/')
     return path
 
+def check_last_stop_downloading():
+    pass
+
+
+
 def download_one_Youtube_video(video_info,default_link):
     # Download a Youtube video
     download_video_options = {}
@@ -178,7 +194,7 @@ def download_one_Youtube_audio(videoID,default_link):
             ydl.download([default_link+videoID])
             result_json['downloaded_ID'].append(videoID)
     except Exception as err:
-        result_json['not_available_ID'].append(videoID)
+        result_json['not_downloaded_ID'].append(videoID)
         print ('BUG!! Problem downloading with',videoID,'as follow',err)
 
 def download_Youtube_playlist(default_link_playlist):
@@ -207,8 +223,15 @@ def download_Functions(playlist_ID):
     # To access to each video then just need its ID. The link to access is https://www.youtube.com/watch?v=<VIDEO ID>
     default_link = 'https://www.youtube.com/watch?v='
 
-    for videoID in tqdm(short_video_ID_dict.keys()):
-        download_one_Youtube_audio(videoID,default_link)
+    # Download a song
+    download_one_Youtube_audio('vxkN3o-KELo',default_link)
+
+
+    # Download a playlist without long duration videos
+    #result_json['lastest_downloaded_ID']=short_video_ID_dict[0]
+    #check_last_stop_downloading()
+    # for videoID in tqdm(short_video_ID_dict.keys()):
+    #     download_one_Youtube_audio(videoID,default_link)
         #download_one_Youtube_video(sample_video_info,default_link)
 
     # Download Playlist
@@ -217,7 +240,7 @@ def download_Functions(playlist_ID):
     # download_Youtube_playlist(default_link_playlist)
 
 def writeToJson(path,filename,data):
-    filePathName = '{}/{}.json'.format(path,filename)
+    filePathName = path+filename+'.json'
     with open(filePathName,'w') as fp:
         json.dump(data,fp)
 
@@ -242,7 +265,11 @@ def main():
 
     download_Functions(playlist_ID)
 
-    writeToJson(path,'Result',result_json)
+    result_json['long_video_ID'] = list(long_video_ID_dict.keys())
+    result_json['short_video_ID'] = list(short_video_ID_dict.keys())
+
+    report_store_path = 'C:/Users/pphuc/PycharmProjects/Download_List_of_Videos/'
+    writeToJson(report_store_path,'Result',result_json)
     
     print('Done! from ', time.asctime(time.localtime(start_time)), ' to ',time.asctime(time.localtime(time.time())))
 
