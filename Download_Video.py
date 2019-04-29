@@ -20,12 +20,12 @@ long_video_ID_dict = {}
 def retrieve_video_ID_list(response):
     # Get a dictionary of all Video IDs in 1 response
     for video in response:
-        if re.search(r'M',video['contentDetails']['duration']):
-            short_video_ID_dict[video['id']]={
+        if re.search(r'H',video['contentDetails']['duration']) or re.search(r'd/d/',video['contentDetails']['duration'])  :
+            long_video_ID_dict[video['id']]={
                 'duration':video['contentDetails']['duration']
             }
         else:
-            long_video_ID_dict[video['id']]={
+            short_video_ID_dict[video['id']]={
                 'duration':video['contentDetails']['duration']
             }
 
@@ -68,8 +68,7 @@ def prepare_API_request(api_key,playlistID):
                 count+=1
             except KeyError as err:
                 print (response_duration)
-                print ('No Key',err)
-                break
+                print ('No Key',err,list_ids)
             #print (count,response_duration)
             if 'nextPageToken' not in response_playlist.keys():
                 flag=False
@@ -86,11 +85,9 @@ def prepare_API_request(api_key,playlistID):
 def display_Info_response(response_playlist,response_duration):
     # Display response
     # General Information
-    # print('General information is {}. Each page contains {}'.format(response_playlist['pageInfo'], list(response_playlist.keys())))
-    # print('Next page token:', response_playlist['nextPageToken'])
-    print ('Length:',len(long_video_ID_dict),'Long:',long_video_ID_dict)
-    print ('Length:',len(short_video_ID_dict),'Short:',short_video_ID_dict)
-    #print('Response duration:',response_duration)
+    print('General information is {}. Each page contains {}'.format(response_playlist['pageInfo'], list(response_playlist.keys())))
+    print('Next page token:', response_playlist['nextPageToken'])
+    print('Response duration:',response_duration)
 
 def display_Info_one_video(page):
     # Information for one video
@@ -191,10 +188,10 @@ def main():
 
     # Prepare API requests
     prepare_API_request(API_key, playlist_ID)
-    #response_playlist,response_duration =prepare_API_request(API_key,playlist_ID)
-    #display_Info_response(response_playlist,response_duration)
-
-
+    print ('Length:',len(long_video_ID_dict),'Long:',long_video_ID_dict)
+    print ('Length:',len(short_video_ID_dict),'Short:',short_video_ID_dict)
+    # response_playlist,response_duration =prepare_API_request(API_key,playlist_ID)
+    # display_Info_response(response_playlist,response_duration)
     # page = response_playlist
     # display_Information(page)
 
