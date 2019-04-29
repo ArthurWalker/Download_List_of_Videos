@@ -4,6 +4,7 @@ import googleapiclient.discovery
 import youtube_dl
 import re
 from tqdm import tqdm
+import json
 # Package:
 #        https://github.com/ytdl-org/youtube-dl
 # Settings for downloading:
@@ -17,15 +18,20 @@ from tqdm import tqdm
 
 short_video_ID_dict = {}
 long_video_ID_dict = {}
+result_json = {
+    'downloaded_ID':[]
+}
+total_videos =''
+
 def retrieve_video_ID_list(response):
     # Get a dictionary of all Video IDs in 1 response
     for video in response:
-        if re.search(r'M',video['contentDetails']['duration']):
-            short_video_ID_dict[video['id']]={
+        if re.search(r'H',video['contentDetails']['duration']) or re.search(r'd/d/',video['contentDetails']['duration'])  :
+            long_video_ID_dict[video['id']]={
                 'duration':video['contentDetails']['duration']
             }
         else:
-            long_video_ID_dict[video['id']]={
+            short_video_ID_dict[video['id']]={
                 'duration':video['contentDetails']['duration']
             }
 
@@ -44,7 +50,6 @@ def prepare_API_request(api_key,playlistID):
 
     # Request playlist and store the video IDs
     flag=True
-    count = 0
     pageToken = ''
     while flag:
         try:
@@ -65,16 +70,13 @@ def prepare_API_request(api_key,playlistID):
                 )
                 response_duration = request_duration.execute()
                 response_duration_result = response_duration['items']
-                count+=1
+                retrieve_video_ID_list(response_duration_result)
             except KeyError as err:
-                print (response_duration)
-                print ('No Key',err)
-                break
-            #print (count,response_duration)
+                #print (response_page)
+                print ('No Key',err,'after',response_duration['items'][-1])
             if 'nextPageToken' not in response_playlist.keys():
                 flag=False
                 break
-            retrieve_video_ID_list(response_duration_result)
             pageToken = response_playlist['nextPageToken']
         except KeyError as err:
             print ('No key',err)
@@ -82,15 +84,14 @@ def prepare_API_request(api_key,playlistID):
     #response_playlist= ''
     #response_duration = ''
     #return (response_playlist['items'],response_duration['items'])
+    total_videos = response_playlist['pageInfo']['totalResults']
 
 def display_Info_response(response_playlist,response_duration):
     # Display response
     # General Information
-    # print('General information is {}. Each page contains {}'.format(response_playlist['pageInfo'], list(response_playlist.keys())))
-    # print('Next page token:', response_playlist['nextPageToken'])
-    print ('Length:',len(long_video_ID_dict),'Long:',long_video_ID_dict)
-    print ('Length:',len(short_video_ID_dict),'Short:',short_video_ID_dict)
-    #print('Response duration:',response_duration)
+    print('General information is {}. Each page contains {}'.format(response_playlist['pageInfo'], list(response_playlist.keys())))
+    print('Next page token:', response_playlist['nextPageToken'])
+    print('Response duration:',response_duration)
 
 def display_Info_one_video(page):
     # Information for one video
@@ -109,8 +110,7 @@ def display_Information(page):
     # Information
     display_Info_one_video(page)
 
-def create_directory():
-    path = os.path.join('C:/Users/pphuc/Desktop/Docs/Current Using Docs/')
+def create_directory(path):
     if not os.path.exists(path + 'Download Youtube Audio/'):
         os.makedirs(path+'Download Youtube Audio/')
     else:
@@ -147,6 +147,7 @@ def download_one_Youtube_audio(videoID,default_link):
     try:
         with youtube_dl.YoutubeDL(download_audio_options) as ydl:
             ydl.download([default_link+videoID])
+            result_json['downloaded_ID'].append(videoID)
     except Exception as err:
         print ('!!!!!!!Problem downloading with',videoID,'as follow',err)
 
@@ -175,6 +176,7 @@ def download_Functions(playlist_ID):
     # Download a single audio
     # To access to each video then just need its ID. The link to access is https://www.youtube.com/watch?v=<VIDEO ID>
     default_link = 'https://www.youtube.com/watch?v='
+    print ('{} of short audios and {} long audios are available to download out of {}'.format(len(short_video_ID_dict.keys()),len(long_video_ID_dict.keys()),total_videos))
     for videoID in tqdm(short_video_ID_dict.keys()):
         download_one_Youtube_audio(videoID,default_link)
         #download_one_Youtube_video(sample_video_info,default_link)
@@ -184,23 +186,31 @@ def download_Functions(playlist_ID):
     # default_link_playlist='https://www.youtube.com/playlist?list='+playlist_ID
     # download_Youtube_playlist(default_link_playlist)
 
+def writeToJson(path,filename,data):
+    filePathName = './{}/{}.json'.format(path,filename)
+    with open(filePathName,'w') as fp:
+        json.dump(data,fp)
+
 def main():
     # Default Variables
     playlist_ID = 'PL0an7prpX1ERTY4ohSEP2ZzQVkViY91ql'
     API_key = '**REMOVED**'
+    path = os.path.join('C:/Users/pphuc/Desktop/Docs/Current Using Docs/')
 
     # Prepare API requests
     prepare_API_request(API_key, playlist_ID)
-    #response_playlist,response_duration =prepare_API_request(API_key,playlist_ID)
-    #display_Info_response(response_playlist,response_duration)
-
-
+    print ('Length:',len(long_video_ID_dict),'Long:',long_video_ID_dict)
+    print ('Length:',len(short_video_ID_dict),'Short:',short_video_ID_dict)
+    # response_playlist,response_duration =prepare_API_request(API_key,playlist_ID)
+    # display_Info_response(response_playlist,response_duration)
     # page = response_playlist
     # display_Information(page)
 
-    create_directory()
+    create_directory(path)
 
     download_Functions(playlist_ID)
+
+    writeToJson(path,'Result',result_json)
 
 if __name__ == '__main__':
     main()
