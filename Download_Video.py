@@ -4,6 +4,7 @@ import googleapiclient.discovery
 import youtube_dl
 import re
 from tqdm import tqdm
+import json
 # Package:
 #        https://github.com/ytdl-org/youtube-dl
 # Settings for downloading:
@@ -17,6 +18,9 @@ from tqdm import tqdm
 
 short_video_ID_dict = {}
 long_video_ID_dict = {}
+result_json = {
+    'downloaded_ID':[]
+}
 def retrieve_video_ID_list(response):
     # Get a dictionary of all Video IDs in 1 response
     for video in response:
@@ -66,9 +70,8 @@ def prepare_API_request(api_key,playlistID):
                 response_duration_result = response_duration['items']
                 retrieve_video_ID_list(response_duration_result)
             except KeyError as err:
-                print (response_duration)
-                print ('No Key',err,response_duration['items'][-1])
-            #print (count,response_duration)
+                print (response_page)
+                print ('No Key',err,'after',response_duration['items'][-1])
             if 'nextPageToken' not in response_playlist.keys():
                 flag=False
                 break
@@ -104,8 +107,7 @@ def display_Information(page):
     # Information
     display_Info_one_video(page)
 
-def create_directory():
-    path = os.path.join('C:/Users/pphuc/Desktop/Docs/Current Using Docs/')
+def create_directory(path):
     if not os.path.exists(path + 'Download Youtube Audio/'):
         os.makedirs(path+'Download Youtube Audio/')
     else:
@@ -142,6 +144,7 @@ def download_one_Youtube_audio(videoID,default_link):
     try:
         with youtube_dl.YoutubeDL(download_audio_options) as ydl:
             ydl.download([default_link+videoID])
+            result_json['downloaded_ID'].append(videoID)
     except Exception as err:
         print ('!!!!!!!Problem downloading with',videoID,'as follow',err)
 
@@ -179,10 +182,16 @@ def download_Functions(playlist_ID):
     # default_link_playlist='https://www.youtube.com/playlist?list='+playlist_ID
     # download_Youtube_playlist(default_link_playlist)
 
+def writeToJson(path,filename,data):
+    filePathName = './{}/{}.json'.format(path,filename)
+    with open(filePathName,'w') as fp:
+        json.dump(data,fp)
+
 def main():
     # Default Variables
     playlist_ID = 'PL0an7prpX1ERTY4ohSEP2ZzQVkViY91ql'
     API_key = '**REMOVED**'
+    path = os.path.join('C:/Users/pphuc/Desktop/Docs/Current Using Docs/')
 
     # Prepare API requests
     prepare_API_request(API_key, playlist_ID)
@@ -193,9 +202,11 @@ def main():
     # page = response_playlist
     # display_Information(page)
 
-    create_directory()
+    create_directory(path)
 
     download_Functions(playlist_ID)
+
+    writeToJson(path,'Result',result_json)
 
 if __name__ == '__main__':
     main()
