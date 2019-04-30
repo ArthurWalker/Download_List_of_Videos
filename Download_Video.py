@@ -26,8 +26,6 @@ result_json = {
     'downloaded_ID':[],
     # List of failed downloaded video
     'not_downloaded_ID':[],
-    # The latest video in the playlist as the process executes from the lastest to the oldest
-    'lastest_downloaded_ID':'',
     # List of short video ID (not downloaded)
     'short_video_ID':[],
     # List of long video ID (not downloaded)
@@ -94,7 +92,6 @@ def request_video_durations(youtube,list_ids_one_request):
         print('BUG!!:', err)
     retrieve_video_ID_list(response_duration_result)
     check_lost_duration_video_requested_videoID(response_duration_result)
-    print('Response duration:',response_duration)
 
 def request_video_ID_in_playlist(api_key,playlistID):
     youtube = initialize_API(api_key)
@@ -133,12 +130,15 @@ def request_video_ID_in_playlist(api_key,playlistID):
     # Display response
     # General Information (from the last page of playlist)
     print('General information from last page of playlist is {}. Each page contains {}'.format(response_playlist['pageInfo'], list(response_playlist.keys())))
-    print('Next page token:', response_playlist['nextPageToken'])
-    display_Information(response_playlist)
+    if 'nextPageToken' in response_playlist:
+        print('Next page token:', response_playlist['nextPageToken'])
+    else:
+        print ('Previous page token:', response_playlist['prevPageToken'])
+    #display_Information(response_playlist)
 
 def display_Information(page):
     # Information for one video
-    some_vid = page[1]
+    some_vid = page[0]
     some_vid_info = some_vid['snippet']
     print ('Keys of some vid:',some_vid.keys())
     print ('The first response ID is {}.\nIt contains {}'.format(some_vid['id'],some_vid_info.keys()))
@@ -154,7 +154,6 @@ def create_directory(path):
         os.makedirs(path+'Download Youtube Audio/')
     else:
         os.chdir(path+'Download Youtube Audio/')
-    return path
 
 def download_one_Youtube_video(video_link):
     # Download a Youtube video
@@ -196,7 +195,8 @@ def download_one_Youtube_audio_for_playlist(videoID,default_link):
         'format':'worstaudio/worst',
         # Only keep the audio
         'extractaudio':True,
-        'forceduration':False,'quiet':True,
+        'forceduration':False,
+        'quiet':True,
         # Download single, not playlist
         'noplaylist':True,
         'outtmpl':'%(title)s.%(ext)s',
@@ -225,7 +225,7 @@ def download_Youtube_playlist(default_link_playlist):
         'noplaylist':False,
         'playlistend':3,
         # Remove the download discription
-        'quiet':True,
+        'quiet':False,
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -241,11 +241,21 @@ def download_Youtube_playlist(default_link_playlist):
 def download_Functions(video_link='',playlist_ID='',type=''):
     if video_link != None and type =='video':
         # Download a video
-        download_one_Youtube_video(video_link)
+        try:
+            download_one_Youtube_video(video_link)
+            result_json['downloaded_ID'].append(video_link)
+        except Exception as err:
+            result_json['not_downloaded_ID'].append(video_link)
+            print('BUG!! Problem downloading with', video_link, 'as follow', err)
 
     if video_link != None and type == 'audio':
         # Download a song
-        download_one_Youtube_audio(video_link)
+        try:
+            download_one_Youtube_audio(video_link)
+            result_json['downloaded_ID'].append(video_link)
+        except Exception as err:
+            result_json['not_downloaded_ID'].append(video_link)
+            print('BUG!! Problem downloading with', video_link, 'as follow', err)
 
     if playlist_ID != None and type=='playlist':
         # Download Playlist
@@ -255,7 +265,7 @@ def download_Functions(video_link='',playlist_ID='',type=''):
 
     if type=='filter' and len(short_video_ID_dict)>0:
         # Download a playlist without long duration videos
-        result_json['lastest_downloaded_ID'] = short_video_ID_dict[0]
+        print (short_video_ID_dict)
         # To access to each video then just need its ID. The link to access is https://www.youtube.com/watch?v=<VIDEO ID>
         default_link = 'https://www.youtube.com/watch?v='
         for videoID in tqdm(short_video_ID_dict.keys()):
@@ -273,7 +283,7 @@ def input_variables():
     print ('2. Download an audio')
     print ('3. Download a playlist of audios')
     print ('4. Download a playlist of audios with a filter of duration')
-    print ('Choose action service from Youtube (by selecting number)):',end='')
+    print ('Choose action service from Youtube (by selecting number)): ',end='')
     option = input()
     return option
 
@@ -281,22 +291,26 @@ def main():
     start_time = time.time()
 
     # Default Variables
-    playlist_ID = 'PL0an7prpX1ERTY4ohSEP2ZzQVkViY91ql'
-    API_key = '**REMOVED**'
     path = os.path.join('C:/Users/pphuc/Desktop/Docs/Current Using Docs/')
-    path = create_directory(path)
+    create_directory(path)
+    report_store_path = 'C:/Users/pphuc/PycharmProjects/Download_List_of_Videos/'
 
     # Input
     option = input_variables()
 
     # Process
     if option == '1':
-        video_link = input()
-        download_Functions(video_link=video_link,type='video')
+        print ('Video ID: ',end='')
+        videoID = input()
+        download_Functions(video_link='https://www.youtube.com/watch?v='+videoID,type='video')
+        writeToJson(report_store_path,'One_video',result_json)
     if option == '2':
-        video_link = input()
-        download_Functions(video_link=video_link,type='audio')
+        print ('Video ID: ',end='')
+        videoID = input()
+        download_Functions(video_link='https://www.youtube.com/watch?v='+videoID,type='audio')
+        writeToJson(report_store_path,'One_audio',result_json)
     if option == '3':
+        print ('Playlist ID: ',end='')
         playlist_ID = input()
         download_Functions(playlist_ID=playlist_ID,type='playlist')
     if option == '4':
@@ -305,11 +319,10 @@ def main():
         playlist_ID = 'PL0an7prpX1ERTY4ohSEP2ZzQVkViY91ql'
         API_key = '**REMOVED**'
         request_video_ID_in_playlist(API_key, playlist_ID)
-        download_Functions()
+        download_Functions(type='filter')
+        writeToJson(report_store_path,'A_playlist_with_filter',result_json)
 
-    # Write result
-    report_store_path = 'C:/Users/pphuc/PycharmProjects/Download_List_of_Videos/'
-    writeToJson(report_store_path,'Result',result_json)
+    # Finish
     print('Done! from ', time.asctime(time.localtime(start_time)), ' to ',time.asctime(time.localtime(time.time())))
 
 if __name__ == '__main__':
