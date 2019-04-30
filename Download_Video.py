@@ -31,21 +31,7 @@ result_json = {
     # List of long video ID (not downloaded)
     'long_video_ID':[],
 }
-
-def retrieve_video_ID_list(response):
-    # Get a dictionary of all Video IDs in 1 response
-    for video in response:
-        if ('contentDetails' not in video):
-            no_duration_video_ID.append(video['id'])
-        else:
-            if re.search(r'H',video['contentDetails']['duration']) or re.search(r'd/d/',video['contentDetails']['duration'])  :
-                long_video_ID_dict[video['id']]={
-                'duration':video['contentDetails']['duration']
-            }
-            else:
-                short_video_ID_dict[video['id']]={
-                'duration':video['contentDetails']['duration']
-            }
+video_id_playlist = []
 
 def check_requested_videoID_from_playlist(video_count,total_videos,list_id):
     # Feature Report: results of requested video ID from playlist to filter those have long or short duration
@@ -65,6 +51,8 @@ def check_lost_duration_video_requested_videoID(response):
             print (video,'has no contentDetails')
     # print (json.dumps(response,indent=4,sort_keys=True))
 
+
+
 def initialize_API(api_key):
     # Disable OAuthlib's HTTPS verification when running locally.
     # *DO NOT* leave this option enabled in production
@@ -78,6 +66,21 @@ def initialize_API(api_key):
     # Execute the request
     youtube = googleapiclient.discovery.build(api_service_name,api_version,developerKey=dev_api_key)
     return youtube
+
+def retrieve_video_ID_list(response):
+    # Get a dictionary of all Video IDs in 1 response
+    for video in response:
+        if ('contentDetails' not in video):
+            no_duration_video_ID.append(video['id'])
+        else:
+            if re.search(r'H',video['contentDetails']['duration']) or re.search(r'\d\d',video['contentDetails']['duration']):
+                long_video_ID_dict[video['id']]={
+                'duration':video['contentDetails']['duration']
+            }
+            else:
+                short_video_ID_dict[video['id']]={
+                'duration':video['contentDetails']['duration']
+            }
 
 def request_video_durations(youtube,list_ids_one_request):
     try:
@@ -93,7 +96,7 @@ def request_video_durations(youtube,list_ids_one_request):
     retrieve_video_ID_list(response_duration_result)
     check_lost_duration_video_requested_videoID(response_duration_result)
 
-def request_video_ID_in_playlist(api_key,playlistID):
+def request_video_ID_in_playlist(api_key,playlistID,ask_duration):
     youtube = initialize_API(api_key)
 
     # Request playlist and store the video IDs
@@ -114,7 +117,8 @@ def request_video_ID_in_playlist(api_key,playlistID):
             video_count += len(response_page)
             list_ids_one_request = ','.join([video['snippet']['resourceId']['videoId'] for video in response_page])
             list_id +=list_ids_one_request.split(',')
-            request_video_durations(youtube,list_ids_one_request)
+            if ask_duration ==True:
+                request_video_durations(youtube,list_ids_one_request)
             if 'nextPageToken' not in response_playlist.keys():
                 flag=False
                 break
@@ -132,7 +136,7 @@ def request_video_ID_in_playlist(api_key,playlistID):
     print('General information from last page of playlist is {}. Each page contains {}'.format(response_playlist['pageInfo'], list(response_playlist.keys())))
     if 'nextPageToken' in response_playlist:
         print('Next page token:', response_playlist['nextPageToken'])
-    else:
+    elif 'prevPageToken' in response_playlist:
         print ('Previous page token:', response_playlist['prevPageToken'])
     #display_Information(response_playlist)
 
@@ -170,7 +174,8 @@ def download_one_Youtube_audio(video_link):
         'format':'worstaudio/worst',
         # Only keep the audio
         'extractaudio':True,
-        'forceduration':False,'quiet':True,
+        'forceduration':False,
+        'quiet':False,
         # Download single, not playlist
         'noplaylist':True,
         'outtmpl':'%(title)s.%(ext)s',
@@ -239,6 +244,7 @@ def download_Youtube_playlist(default_link_playlist):
         print ('BUG!! Problem downloading with',default_link_playlist,'as follow',err)
 
 def download_Functions(video_link='',playlist_ID='',type=''):
+    print ('Downloading ...')
     if video_link != None and type =='video':
         # Download a video
         try:
@@ -265,7 +271,6 @@ def download_Functions(video_link='',playlist_ID='',type=''):
 
     if type=='filter' and len(short_video_ID_dict)>0:
         # Download a playlist without long duration videos
-        print (short_video_ID_dict)
         # To access to each video then just need its ID. The link to access is https://www.youtube.com/watch?v=<VIDEO ID>
         default_link = 'https://www.youtube.com/watch?v='
         for videoID in tqdm(short_video_ID_dict.keys()):
@@ -283,9 +288,14 @@ def input_variables():
     print ('2. Download an audio')
     print ('3. Download a playlist of audios')
     print ('4. Download a playlist of audios with a filter of duration')
+    print ('5. Check if there is any video not available')
     print ('Choose action service from Youtube (by selecting number)): ',end='')
     option = input()
     return option
+
+def option_5(playlist_ID,API_key,ask_duration=False):
+    request_video_ID_in_playlist(playlist_ID,API_key,ask_duration=ask_duration)
+    #print (check_prev_download())
 
 def main():
     start_time = time.time()
@@ -316,16 +326,20 @@ def main():
     if option == '4':
         # Prepare API requests
         # Default Variables
-        playlist_ID = 'PL0an7prpX1ERTY4ohSEP2ZzQVkViY91ql'
+        print ('Playlist ID: ',end='')
+        playlist_ID = input()
         API_key = '**REMOVED**'
-        request_video_ID_in_playlist(API_key, playlist_ID)
+        request_video_ID_in_playlist(API_key, playlist_ID,ask_duration=True)
         download_Functions(type='filter')
         writeToJson(report_store_path,'A_playlist_with_filter',result_json)
+    if option == '5':
+        print ('Playlist ID:',end='')
+        playlist_ID = input()
+        API_key = '**REMOVED**'
+        option_5(playlist_ID,API_key,ask_duration=False)
 
     # Finish
     print('Done! from ', time.asctime(time.localtime(start_time)), ' to ',time.asctime(time.localtime(time.time())))
 
 if __name__ == '__main__':
     main()
-
-
