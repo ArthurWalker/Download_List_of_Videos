@@ -51,7 +51,20 @@ def check_lost_duration_video_requested_videoID(response):
             print (video,'has no contentDetails')
     # print (json.dumps(response,indent=4,sort_keys=True))
 
+def check_existed_ID_download(video_ID):
+    with open('.json') as json_file:
+        data = json.load(json_file)
+    if video_ID not in data['downloaded_ID']:
+        return 'Existed'
+    return 'Not existed'
 
+def track_prev_download():
+    with open('.json') as json_file:
+        data = json.load(json_file)
+    havent_download_ID = list(set(video_id_playlist) - set(data['downloaded_ID']))
+    if len(havent_download_ID) > 0:
+        return True
+    return False
 
 def initialize_API(api_key):
     # Disable OAuthlib's HTTPS verification when running locally.
@@ -73,7 +86,7 @@ def retrieve_video_ID_list(response):
         if ('contentDetails' not in video):
             no_duration_video_ID.append(video['id'])
         else:
-            if re.search(r'H',video['contentDetails']['duration']) or re.search(r'\d\d',video['contentDetails']['duration']):
+            if re.search(r'H',video['contentDetails']['duration']) or re.search(r'\d\dM',video['contentDetails']['duration']):
                 long_video_ID_dict[video['id']]={
                 'duration':video['contentDetails']['duration']
             }
@@ -293,9 +306,9 @@ def input_variables():
     option = input()
     return option
 
-def option_5(playlist_ID,API_key,ask_duration=False):
-    request_video_ID_in_playlist(playlist_ID,API_key,ask_duration=ask_duration)
-    #print (check_prev_download())
+def option_5(playlist_ID,API_key):
+    request_video_ID_in_playlist(playlist_ID,API_key,False)
+    track_prev_download()
 
 def main():
     start_time = time.time()
@@ -329,14 +342,14 @@ def main():
         print ('Playlist ID: ',end='')
         playlist_ID = input()
         API_key = '**REMOVED**'
-        request_video_ID_in_playlist(API_key, playlist_ID,ask_duration=True)
+        request_video_ID_in_playlist(API_key, playlist_ID,True)
         download_Functions(type='filter')
         writeToJson(report_store_path,'A_playlist_with_filter',result_json)
     if option == '5':
         print ('Playlist ID:',end='')
         playlist_ID = input()
         API_key = '**REMOVED**'
-        option_5(playlist_ID,API_key,ask_duration=False)
+        option_5(playlist_ID,API_key)
 
     # Finish
     print('Done! from ', time.asctime(time.localtime(start_time)), ' to ',time.asctime(time.localtime(time.time())))
