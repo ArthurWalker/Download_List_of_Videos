@@ -372,7 +372,7 @@ def input_multiple_download():
 def input_API_key():
     print ('Your API key: ',end='')
     api = input()
-    #**REMOVED**
+    #
     return api
 
 
