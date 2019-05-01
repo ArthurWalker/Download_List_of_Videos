@@ -15,7 +15,7 @@ import time
 # Sample API:
 #        https://developers.google.com/apis-explorer/#p/youtube/v3/youtube.videos.list?part=contentDetails&id=jMeSar7_ECE&fields=etag%252CeventId%252Citems%252Ckind%252CnextPageToken%252CpageInfo%252CprevPageToken%252CtokenPagination%252CvisitorId&_h=2&
 # Testing API:
-#        https://developers.google.com/apis-explorer/#p/youtube/v3/youtube.playlistItems.list?part=snippet&id=**REMOVED**&maxResults=10&playlistId=PL0an7prpX1ERTY4ohSEP2ZzQVkViY91ql&_h=5&
+#        https://developers.google.com/apis-explorer/#p/youtube/v3/youtube.playlistItems.list
 # Sample code:
 #        https://www.youtube.com/watch?v=eZUpOY8mcRY&t=569s
 
