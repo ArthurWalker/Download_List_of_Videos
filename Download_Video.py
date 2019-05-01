@@ -14,6 +14,8 @@ import time
 #        https://www.programcreek.com/python/example/98358/youtube_dl.YoutubeDL
 # Sample API:
 #        https://developers.google.com/apis-explorer/#p/youtube/v3/youtube.videos.list?part=contentDetails&id=jMeSar7_ECE&fields=etag%252CeventId%252Citems%252Ckind%252CnextPageToken%252CpageInfo%252CprevPageToken%252CtokenPagination%252CvisitorId&_h=2&
+# Testing API:
+#        https://developers.google.com/apis-explorer/#p/youtube/v3/youtube.playlistItems.list?part=snippet&id=**REMOVED**&maxResults=10&playlistId=PL0an7prpX1ERTY4ohSEP2ZzQVkViY91ql&_h=5&
 # Sample code:
 #        https://www.youtube.com/watch?v=eZUpOY8mcRY&t=569s
 
@@ -29,7 +31,7 @@ result_json = {
     # List of downloaded long video
     'download_long_video_ID':[],
     # List of failed downloaded video
-    'not_downloaded_video_ID':[],
+    'failed_downloaded_video_ID':[],
     # List of short video ID (not downloaded)
     'short_video_ID':[],
     # List of long video ID (not downloaded)
@@ -62,18 +64,28 @@ def check_existed_ID_download(video_ID):
         return 'Existed'
     return 'Not existed'
 
-def track_prev_download(with_duration):
+def find_all_songs_downloaded(path):
+    download_list = os.listdir(path)
+    id_list = [re.search(r'.{11}',title).group() for title in download_list]
+    return id_list
+
+def open_Json_file(JSONfile):
+    try:
+        with open('C:/Users/pphuc/PycharmProjects/Download_List_of_Videos/'+JSONfile) as json_file:
+            data = json.load(json_file)
+    except Exception as err:
+        print('BUG!!', err)
+        data = {}
+    return data
+
+def track_prev_download_with_Json(with_duration):
     result = {
         'still remain':False,
         'short ID':[],
         'long ID': [],
         'remain ID':[],
     }
-    try:
-        with open('C:/Users/pphuc/PycharmProjects/Download_List_of_Videos/A_playlist_with_filter.json') as json_file:
-            data = json.load(json_file)
-    except Exception as err:
-        print ('BUG!!',err)
+    data = open_Json_file('A_playlist_with_filter.json')
     if with_duration=='no':
         havent_download_ID = list(set(short_video_ID_dict.keys+long_video_ID_dict.keys) - set(data['downloaded_video_ID']))
         result['still remain']=True
@@ -210,7 +222,7 @@ def download_one_Youtube_audio(video_link):
         'quiet':False,
         # Download single, not playlist
         'noplaylist':True,
-        'outtmpl':'%(title)s.%(ext)s',
+        'outtmpl':'%(id)s_%(title)s.%(ext)s',
         'nocheckcertificate':True,
         # Print list of the formats to stdout and exit => Enable this will not download video, just print list of quality
         #'listformats':True,
@@ -236,7 +248,7 @@ def download_one_Youtube_audio_for_playlist(videoID,default_link):
         'quiet':True,
         # Download single, not playlist
         'noplaylist':True,
-        'outtmpl':'%(title)s.%(ext)s',
+        'outtmpl':'%(id)s_%(title)s.%(ext)s',
         'nocheckcertificate':True,
         # Print list of the formats to stdout and exit => Enable this will not download video, just print list of quality
         #'listformats':True,
@@ -257,17 +269,20 @@ def download_one_Youtube_audio_for_playlist(videoID,default_link):
                 result_json['download_long_video_ID'].append(videoID)
             result_json['downloaded_short_video_ID'].append(videoID)
     except Exception as err:
-        result_json['not_downloaded_video_ID'].append(videoID)
+        result_json['failed_downloaded_video_ID'].append(videoID)
         print ('BUG!! Problem downloading with',videoID,'as follow',err)
 
 def download_Youtube_playlist(default_link_playlist):
+    print ('Number of songs limited to download: ',end='')
+    numb_song = int(input())
     download_option={
         'format':'worstaudio/worst',
         'extractaudio':True,
         'noplaylist':False,
-        'playlistend':3,
+        'playlistend':numb_song,
         # Remove the download discription
         'quiet':False,
+        'outtmpl':'%(id)s_%(title)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -288,8 +303,6 @@ def download_a_list_audio(video_ID_list):
     for videoID in tqdm(video_ID_list):
         download_one_Youtube_audio_for_playlist(videoID, default_link)
 
-
-
 def download_Functions(video_link='',playlist_ID='',type='',list_video=[]):
     print ('Downloading ...')
     if video_link != None and type =='video':
@@ -298,7 +311,7 @@ def download_Functions(video_link='',playlist_ID='',type='',list_video=[]):
             download_one_Youtube_video(video_link)
             result_json['downloaded_video_ID'].append(video_link)
         except Exception as err:
-            result_json['not_downloaded_video_ID'].append(video_link)
+            result_json['failed_downloaded_video_ID'].append(video_link)
             print('BUG!! Problem downloading with', video_link, 'as follow', err)
 
     if video_link != None and type == 'audio':
@@ -307,7 +320,7 @@ def download_Functions(video_link='',playlist_ID='',type='',list_video=[]):
             download_one_Youtube_audio(video_link)
             result_json['downloaded_video_ID'].append(video_link)
         except Exception as err:
-            result_json['not_downloaded_video_ID'].append(video_link)
+            result_json['failed_downloaded_video_ID'].append(video_link)
             print('BUG!! Problem downloading with', video_link, 'as follow', err)
 
     if playlist_ID != None and type=='playlist':
@@ -339,10 +352,89 @@ def input_variables():
     print ('2. Download an audio')
     print ('3. Download a playlist of audios')
     print ('4. Download a playlist of audios with a filter of duration')
-    print ('5. Check if there is any video not available')
+    print ('5. Download songs from play list which are not available in the JSON file')
+    print ('6. Download songs from play list which are not available in the download folder')
+    print ('7. Download songs which are failed from the playlist')
     print ('Choose action service from Youtube (by selecting number)): ',end='')
     option = input()
     return option
+
+def input_single_download():
+    print('Video ID: ', end='')
+    videoID = input()
+    return videoID
+
+def input_multiple_download():
+    print('Playlist ID: ', end='')
+    playlist_ID = input()
+    return playlist_ID
+
+def input_API_key():
+    print ('Your API key: ',end='')
+    api = input()
+    #**REMOVED**
+    return api
+
+
+
+def option1(report_store_path):
+    download_Functions(video_link='https://www.youtube.com/watch?v=' + input_single_download(), type='video')
+    writeToJson(report_store_path, 'One_video', result_json)
+
+def option2(report_store_path):
+    download_Functions(video_link='https://www.youtube.com/watch?v=' + input_single_download(), type='audio')
+    writeToJson(report_store_path, 'One_audio', result_json)
+
+def option3():
+    download_Functions(playlist_ID=input_multiple_download(), type='playlist')
+
+def option4(report_store_path):
+    # Prepare API requests
+    # Default Variables
+    API_key = input_API_key()
+    print('Distinguish the duration ? (yes/no): ', end='')
+    duration = input()
+    request_video_ID_in_playlist(API_key, input_multiple_download(), duration)
+    if duration == 'yes':
+        download_Functions(type='filter_short')
+        # download_Functions(type='filter_long')
+        writeToJson(report_store_path, 'A_playlist_with_filter', result_json)
+    else:
+        print('Please choose the 3rd option')
+
+def option5(report_store_path):
+    API_key = input_API_key()
+    print('Distinguish the duration ? (yes/no): ', end='')
+    duration = input()
+
+    request_video_ID_in_playlist(API_key, input_multiple_download(), duration)
+
+    trace_result = track_prev_download_with_Json(duration)
+    print('Is there any video to download ?', trace_result['still remain'])
+    if trace_result['still remain'] == True:
+        if duration == 'no':
+            download_Functions(type='conti', list_video=trace_result['remain ID'])
+        else:
+            download_Functions(type='conti', list_video=trace_result['downloaded_short_video_ID'])
+            # download_Functions(type='conti',list_video=trace_result['download_long_video_ID'])
+    writeToJson(report_store_path, 'Continue_download_from_pre_playlist_from_JSON', result_json)
+
+def option6(report_store_path,path):
+    downloaded_list = find_all_songs_downloaded(path+'Download Youtube Audio/')
+    print ('Songs are not in the folder:',downloaded_list)
+    API_key = input_API_key()
+    request_video_ID_in_playlist(API_key, input_multiple_download(), 'no')
+    not_existed_in_folder = list(set(result_json['video_ID_playlist']) - set(downloaded_list))
+    download_Functions(type='conti',list_video=not_existed_in_folder)
+    writeToJson(report_store_path, 'Continue_download_from_pre_playlist_in_Folder', result_json)
+
+def option7(report_store_path):
+    print ('Choose a json file to look at: ',end='')
+    json_file = input()
+    data = open_Json_file(json_file)
+    if len(data['failed_downloaded_video_ID']) > 0:
+        download_Functions(type='conti',list_video=data['failed_downloaded_video_ID'])
+        writeToJson(report_store_path,'Failed_download_from_list',result_json)
 
 def main():
     start_time = time.time()
@@ -357,50 +449,22 @@ def main():
 
     # Process
     if option == '1':
-        print ('Video ID: ',end='')
-        videoID = input()
-        download_Functions(video_link='https://www.youtube.com/watch?v='+videoID,type='video')
-        writeToJson(report_store_path,'One_video',result_json)
+        option1(report_store_path)
     if option == '2':
-        print ('Video ID: ',end='')
-        videoID = input()
-        download_Functions(video_link='https://www.youtube.com/watch?v='+videoID,type='audio')
-        writeToJson(report_store_path,'One_audio',result_json)
+        option2(report_store_path)
     if option == '3':
-        print ('Playlist ID: ',end='')
-        playlist_ID = input()
-        download_Functions(playlist_ID=playlist_ID,type='playlist')
+        option3()
     if option == '4':
-        # Prepare API requests
-        # Default Variables
-        print ('Playlist ID: ',end='')
-        playlist_ID = input()
-        API_key = '**REMOVED**'
-        print ('Distinguish the duration ? (yes/no): ',end='')
-        duration = input()
-
-        request_video_ID_in_playlist(API_key, playlist_ID,duration)
-        download_Functions(type='filter_short')
-        #download_Functions(type='filter_long')
-        writeToJson(report_store_path,'A_playlist_with_filter',result_json)
+        option4(report_store_path)
     if option == '5':
-        print ('Playlist ID: ',end='')
-        playlist_ID = input()
-        API_key = '**REMOVED**'
-        print ('Distinguish the duration ? (yes/no): ',end='')
-        duration = input()
+        option5(report_store_path)
+    if option == '6':
+        option6(report_store_path,path)
+    if option == '7':
+        option7(report_store_path)
 
-        request_video_ID_in_playlist(API_key, playlist_ID, duration)
-
-        trace_result= track_prev_download(duration)
-        print ('Is there any video to download ?', trace_result['still remain'])
-        if trace_result['still remain']==True:
-            if duration=='no':
-                download_Functions(type='conti',list_video=trace_result['remain ID'])
-            else:
-                download_Functions(type='conti',list_video=trace_result['downloaded_short_video_ID'])
-                #download_Functions(type='conti',list_video=trace_result['download_long_video_ID'])
-        writeToJson(report_store_path,'Continue_download_from_pre_playlist',result_json)
+    if len(result_json['failed_downloaded_video_ID']) > 0:
+        print ('These songs are failed to download:',result_json['failed_downloaded_video_ID'])
 
     # Finish
     print('Done! from ', time.asctime(time.localtime(start_time)), ' to ',time.asctime(time.localtime(time.time())))
