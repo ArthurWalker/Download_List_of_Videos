@@ -375,7 +375,9 @@ def input_API_key():
     #
     return api
 
-
+def ask_for_which_task():
+    print ('Get type of songs (short/long): ',end='')
+    return input()
 
 def option1(report_store_path):
     download_Functions(video_link='https://www.youtube.com/watch?v=' + input_single_download(), type='video')
@@ -394,10 +396,13 @@ def option4(report_store_path):
     API_key = input_API_key()
     print('Distinguish the duration ? (yes/no): ', end='')
     duration = input()
+    type_audio = ask_for_which_task()
     request_video_ID_in_playlist(API_key, input_multiple_download(), duration)
     if duration == 'yes':
-        download_Functions(type='filter_short')
-        # download_Functions(type='filter_long')
+        if type_audio=='short':
+            download_Functions(type='filter_short')
+        elif type_audio=='long':
+            download_Functions(type='filter_long')
         writeToJson(report_store_path, 'A_playlist_with_filter', result_json)
     else:
         print('Please choose the 3rd option')
@@ -406,7 +411,7 @@ def option5(report_store_path):
     API_key = input_API_key()
     print('Distinguish the duration ? (yes/no): ', end='')
     duration = input()
-
+    type_audio = ask_for_which_task()
     request_video_ID_in_playlist(API_key, input_multiple_download(), duration)
 
     trace_result = track_prev_download_with_Json(duration)
@@ -415,8 +420,10 @@ def option5(report_store_path):
         if duration == 'no':
             download_Functions(type='conti', list_video=trace_result['remain ID'])
         else:
-            download_Functions(type='conti', list_video=trace_result['downloaded_short_video_ID'])
-            # download_Functions(type='conti',list_video=trace_result['download_long_video_ID'])
+            if (type_audio=='short'):
+                download_Functions(type='conti', list_video=trace_result['downloaded_short_video_ID'])
+            elif type_audio=='long':
+                download_Functions(type='conti',list_video=trace_result['download_long_video_ID'])
     writeToJson(report_store_path, 'Continue_download_from_pre_playlist_from_JSON', result_json)
 
 def option6(report_store_path,path):
