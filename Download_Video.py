@@ -60,7 +60,6 @@ def check_requested_videoID_from_playlist(video_count,total_videos,list_id):
 
 # Check error information for error request of each video
 def check_lost_duration_video_requested_videoID(response):
-    print ('Feature Report: Resquesting videoIDs which dont have duration')
     # response is the list of song data which contain video duration
     for video in response:
         if 'contentDetails' not in video:
