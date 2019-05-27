@@ -6,6 +6,7 @@ import re
 from tqdm import tqdm
 import json
 import time
+
 # Package:
 #        https://github.com/ytdl-org/youtube-dl
 # Settings for downloading:
@@ -146,8 +147,7 @@ def retrieve_video_ID_list(response):
                 'duration':video['contentDetails']['duration']
             }
 
-# Take the API to request data every single video in the list
-def request_video_durations(youtube,list_ids_one_request):
+def request_video_duraion(youtube,list_ids_one_request):
     try:
         request_duration = youtube.videos().list(
             part='contentDetails',
@@ -155,9 +155,15 @@ def request_video_durations(youtube,list_ids_one_request):
         )
         response_duration = request_duration.execute()
         response_duration_result = response_duration['items']
+        return response_duration_result
     except KeyError as err:
         # print (response_page)
         print('BUG!!:', err)
+    return
+
+# Take the API to request data every single video in the list
+def video_durations(youtube,list_ids_one_request):
+    response_duration_result = request_video_duraion(youtube,list_ids_one_request)
     retrieve_video_ID_list(response_duration_result)
     check_lost_duration_video_requested_videoID(response_duration_result)
 
@@ -183,7 +189,7 @@ def request_video_ID_in_playlist(api_key,playlistID,ask_duration):
             list_ids_one_request = ','.join([video['snippet']['resourceId']['videoId'] for video in response_page])
             result_json['video_ID_playlist'] +=list_ids_one_request.split(',')
             if ask_duration =='yes':
-                request_video_durations(youtube,list_ids_one_request)
+                video_durations(youtube,list_ids_one_request)
             if 'nextPageToken' not in response_playlist.keys():
                 flag=False
                 break
@@ -386,6 +392,7 @@ def input_variables():
     print ('5. Download songs from a playlist which are not available in the JSON file')
     print ('6. Download songs from a playlist which are not available in the download folder')
     print ('7. Download songs which are failed from the playlist')
+    print ('8. Download a list of songs made by users')
     print ('Choose action service from Youtube (by selecting number)): ',end='')
     option = input()
     return option
@@ -405,14 +412,95 @@ def input_multiple_download():
 # Create input for download option
 def input_API_key():
     print ('Your API key: ',end='')
-    api = input()
-    #
-    return api
+#    api = input()
+    path = re.sub(r'\\','/','C:\\Users\\pphuc\\PycharmProjects\\Download_List_of_Videos')+'/passwords.txt'
+    try:
+        with open(path,'r') as  f:
+          api = f.readline()
+          return api
+    except Exception as err:
+        print ('Error with accessing password file: ',err)
+    return
 
 # Create input for download option
 def ask_for_which_task():
     print ('Get type of songs (short/long): ',end='')
     return input()
+
+# Search for video on Youtube
+def search_video(youtube,data,api_key):
+    try:
+        search_video = youtube.search().list(
+            part='snippet',
+            q = data,
+            type='video',
+            maxResults=3,
+        )
+        search_execution = search_video.execute()
+        response_result = search_execution['items']
+        return response_result
+    except Exception as err:
+        print ('Error with searching video: ',err)
+    return
+
+# Extract duration and calcaulate to measure with second parameter
+def extract_duration(youtube,dict_video):
+    string_list_video_id = ','.join(list(dict_video.keys()))
+    list_duration_result = [info['contentDetails']['duration'][2:] for info in request_video_duraion(youtube,string_list_video_id)]
+    for key in dict_video:
+        key_index = list(dict_video.keys()).index(key)
+        duration = list_duration_result[key_index]
+        temp_variable = 0
+        if re.search(r'H', duration):
+            temp_variable += int(re.search(r'\d+H', duration).group()[:-1]) * 3600
+        if re.search(r'M', duration):
+            temp_variable += int(re.search(r'\d+M', duration).group()[:-1]) * 60
+        if re.search(r'S', duration):
+            temp_variable += int(re.search(r'\d+S', duration).group()[:-1])
+        dict_video[key].append(temp_variable)
+        dict_video[key].append(duration)
+    return dict_video
+
+# Pick the most qualified video
+def find_desired_video(data,dict_video):
+    min_duration = min([v[1] for v in dict_video.values()])
+    for k,v in dict_video.items():
+        if (re.search(r'[L|l]yrics]',v[0]) or re.search(r'[O|o]fficial',v[0])) and  v[1]==min_duration:
+            return [k,v]
+        else:
+            if v[1] == min_duration:
+                return [k,v]
+
+# Find match video by passing down to smaller functions
+
+
+def find_match(youtube,inputted_song,list_searching_result):
+    dict_video = {}
+    for video in list_searching_result:
+        video_id = video['id']['videoId']
+        video_title = video['snippet']['title']
+        dict_video[video_id]=[video_title]
+    dict_video = extract_duration(youtube,dict_video)
+    matched_video = find_desired_video(inputted_song,dict_video)
+    return matched_video
+
+# Download a song
+def download_song_from_list(video):
+    download_Functions(video_link='https://www.youtube.com/watch?v=' + video[0], type='audio')
+    load_to_rewrite_Json(video)
+
+def load_to_rewrite_Json(video):
+    file_name = '/'.join(os.path.abspath('Download_Video.py').split('\\')[:-1])+'/Downloaded_songs_from_a_user_list.json'
+    if not os.path.isfile(file_name):
+        data = {video[0]: video[1]}
+        with open(file_name, 'w') as fp:
+            json.dump(data, fp)
+    else:
+        with open(file_name, 'r') as feedsjson:
+            feeds = json.load(feedsjson)
+        feeds[video[0]]=video[1]
+        with open(file_name, 'w') as fp:
+            json.dump(feeds, fp)
 
 # Task 1: Download a video
 def option1(report_store_path):
@@ -485,6 +573,24 @@ def option7(report_store_path):
         download_Functions(type='conti',list_video=data['failed_downloaded_video_ID'])
         writeToJson(report_store_path,'Failed_download_from_list',result_json)
 
+# Task 8: Download a list of songs passed by users
+def option8(restore_store_path):
+    print ('Pass the input text file: ',end='')
+    input_file = input()
+    api_key = input_API_key()
+    if re.search(r'\\',input_file):
+        input_file = re.sub(r"\\",'/',input_file)
+    try:
+        youtube = initialize_API(api_key)
+        with open(input_file,'r') as inp_file:
+            inputted_songs = inp_file.readlines()
+            for line_song in inputted_songs:
+                list_resulst= search_video(youtube,line_song[:-1],api_key)
+                found_video = find_match(youtube,line_song[:-1],list_resulst)
+                download_song_from_list(found_video)
+    except Exception as err:
+        print ('Error with reading from input file: ',err)
+
 # Control the flow of the program
 def main():
     start_time = time.time()
@@ -512,6 +618,9 @@ def main():
         option6(report_store_path,path)
     if option == '7':
         option7(report_store_path)
+    if option == '8':
+        option8(report_store_path)
+
 
     if len(result_json['failed_downloaded_video_ID']) > 0:
         print ('These songs are failed to download:',result_json['failed_downloaded_video_ID'])
@@ -521,3 +630,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+#C:\Users\pphuc\PycharmProjects\Download_List_of_Videos/list_of_songs.txt
+
