@@ -443,6 +443,7 @@ def search_video(youtube,data,api_key):
         print ('Error with searching video: ',err)
     return
 
+# Extract duration and calcaulate to measure with second parameter
 def extract_duration(youtube,dict_video):
     string_list_video_id = ','.join(list(dict_video.keys()))
     list_duration_result = [info['contentDetails']['duration'][2:] for info in request_video_duraion(youtube,string_list_video_id)]
@@ -457,11 +458,21 @@ def extract_duration(youtube,dict_video):
         if re.search(r'S', duration):
             temp_variable += int(re.search(r'\d+S', duration).group()[:-1])
         dict_video[key].append(temp_variable)
+        dict_video[key].append(duration)
     return dict_video
 
-def find_match_title(data,dict_video):
-    match= ''
-    return
+# Pick the most qualified video
+def find_desired_video(data,dict_video):
+    min_duration = min([v[1] for v in dict_video.values()])
+    for k,v in dict_video.items():
+        if (re.search(r'[L|l]yrics]',v[0]) or re.search(r'[O|o]fficial',v[0])) and  v[1]==min_duration:
+            return [k,v]
+        else:
+            if v[1] == min_duration:
+                return [k,v]
+
+# Find match video by passing down to smaller functions
+
 
 def find_match(youtube,inputted_song,list_searching_result):
     dict_video = {}
@@ -470,7 +481,26 @@ def find_match(youtube,inputted_song,list_searching_result):
         video_title = video['snippet']['title']
         dict_video[video_id]=[video_title]
     dict_video = extract_duration(youtube,dict_video)
-    match_title = find_match_title(inputted_song,dict_video)
+    matched_video = find_desired_video(inputted_song,dict_video)
+    return matched_video
+
+# Download a song
+def download_song_from_list(video):
+    download_Functions(video_link='https://www.youtube.com/watch?v=' + video[0], type='audio')
+    load_to_rewrite_Json(video)
+
+def load_to_rewrite_Json(video):
+    file_name = '/'.join(os.path.abspath('Download_Video.py').split('\\')[:-1])+'/Downloaded_songs_from_a_user_list.json'
+    if not os.path.isfile(file_name):
+        data = {video[0]: video[1]}
+        with open(file_name, 'w') as fp:
+            json.dump(data, fp)
+    else:
+        with open(file_name, 'r') as feedsjson:
+            feeds = json.load(feedsjson)
+        feeds[video[0]]=video[1]
+        with open(file_name, 'w') as fp:
+            json.dump(feeds, fp)
 
 # Task 1: Download a video
 def option1(report_store_path):
@@ -553,9 +583,11 @@ def option8(restore_store_path):
     try:
         youtube = initialize_API(api_key)
         with open(input_file,'r') as inp_file:
-            inputted_song = inp_file.readline()
-            list_resulst= search_video(youtube,inputted_song,api_key)
-            find_match(youtube,inputted_song,list_resulst)
+            inputted_songs = inp_file.readlines()
+            for line_song in inputted_songs:
+                list_resulst= search_video(youtube,line_song[:-1],api_key)
+                found_video = find_match(youtube,line_song[:-1],list_resulst)
+                download_song_from_list(found_video)
     except Exception as err:
         print ('Error with reading from input file: ',err)
 
