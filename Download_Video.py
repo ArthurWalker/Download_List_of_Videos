@@ -291,6 +291,8 @@ def download_one_Youtube_audio_for_playlist(videoID,default_link):
                 'preferredquality':'192',
             }]
     }
+    path = 'C:/Users/pphuc/Desktop/Docs/Current Using Docs/'
+    create_directory(path)
     try:
         with youtube_dl.YoutubeDL(download_audio_options) as ydl:
             ydl.download([default_link+videoID])
